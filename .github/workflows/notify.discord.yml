@@ -1,0 +1,21 @@
+name: Notify Discord
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord Notification Lesoll Server
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{
+                    \"avatar_url\": \" https://github.com/${{ github.actor }}.png \",
+                    \"username\": \" ${{ github.actor }} \",
+                    \"content\": \" Admin: @elrefai99 \nServer: **0Gosha Server*** \nNew push in branch: **${{ github.ref_name }}** \nCommit: **${{ github.event.head_commit.message }}**\"
+                  }" \
+               ${{ secrets.DISCORD_WEBHOOK_0GOSHA }}

@@ -1,0 +1,41 @@
+name: S3 Backup on Live Push
+
+on:
+  push:
+    branches:
+      - live
+
+jobs:
+  backup:
+    name: Zip & Upload to S3
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create zip archive
+        run: |
+          ZIP_NAME="${{project_name}}-$(date +'%Y%m%d-%H%M%S')-${GITHUB_SHA::7}.zip"
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+
+          zip -r "$ZIP_NAME" . \
+            --exclude "node_modules/*" \
+            --exclude ".git/*" \
+            --exclude ".env" \
+            --exclude ".env.dev" \
+            --exclude ".env.test" \
+            --exclude "logs/*" \
+            --exclude "*.log" \
+            --exclude "coverage/*" \
+            --exclude ".nyc_output/*" \
+            --exclude ".cache/*"
+
+      - name: Upload to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws s3 cp "$ZIP_NAME" "s3://${{ secrets.AWS_S3_BACKUP_BUCKET }}/backups/${{project_name}}/$ZIP_NAME"
+          echo "Uploaded: s3://${{ secrets.AWS_S3_BACKUP_BUCKET }}/backups/${{project_name}}/$ZIP_NAME"

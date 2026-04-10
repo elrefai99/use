@@ -1,0 +1,64 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - live
+      - dev
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          if [ "${{ github.ref_name }}" = "live" ]; then
+            echo "${{ secrets.EC2_SSH_KEY_LIVE }}" > ~/.ssh/deploy_key
+            ssh-keyscan -H "${{ secrets.EC2_IP_LIVE_HOST }}" >> ~/.ssh/known_hosts
+          else
+            echo "${{ secrets.EC2_SSH_KEY_PBE }}" > ~/.ssh/deploy_key
+            ssh-keyscan -H "${{ secrets.EC2_IP_PBE_HOST }}" >> ~/.ssh/known_hosts
+          fi
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Deploy
+        run: |
+          if [ "${{ github.ref_name }}" = "live" ]; then
+            HOST="root@${{ secrets.EC2_IP_LIVE_HOST }}"
+            PROJECT_DIR="/root/properties"
+          else
+            HOST="root@${{ secrets.EC2_IP_PBE_HOST }}"
+            PROJECT_DIR="/root/property"
+          fi
+
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              $HOST << ENDSSH
+            set -e
+
+            cd $PROJECT_DIR
+
+            git pull origin ${{ github.ref_name }}
+
+            npm install
+
+            if [ -f tsconfig.json ]; then
+              echo "[deploy] TypeScript — building"
+              npm run build
+            else
+              echo "[deploy] JavaScript — skipping build"
+            fi
+
+            pm2 reload ecosystem.config.cjs --only ${{project_name}}
+
+            pm2 save
+
+            echo "[deploy] Done"
+          ENDSSH
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
