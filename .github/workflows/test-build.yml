@@ -3,7 +3,7 @@ name: Test Build TypeScript Project
 on:
   push:
     branches: 
-      - "**"
+      - "live"
   workflow_dispatch:
 
 permissions:
