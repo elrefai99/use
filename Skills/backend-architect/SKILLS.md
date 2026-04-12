@@ -28,12 +28,18 @@ Organize code by domain feature, not technical layer:
 
 ```
 src/Module/<FeatureName>/
-  ├── controller.ts      # HTTP handlers (thin, delegates to service)
-  ├── service.ts         # Business logic
-  ├── schema.ts          # Mongoose schema/model
-  ├── dto.ts             # Zod validation schemas + inferred types
-  ├── routes.ts          # Express router definitions
-  ├── __tests__/         # Co-located tests
+  ├── controller/
+        └── <feature>.controller.ts      # HTTP handlers (thin, delegates to service)
+  ├── service
+        └── <feature>.service.ts        # Business logic
+  ├── schema
+        └── <feature>.schema.ts          # Mongoose schema/model
+  ├── dto
+        └── index.dto.ts              # Zod validation schemas + inferred types
+  ├── __tests__/
+        └── <feature>.test.ts         # Co-located tests
+  ├── <feature>.routes.ts || feature.module.ts         # Express router definitions
+  ├── <feature>.swagger.ts || feature.module.ts         # Express router definitions
   └── index.ts           # Barrel export
 ```
 
