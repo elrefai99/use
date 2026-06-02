@@ -2,7 +2,9 @@ name: Deploy to AWS
 
 on:
   push:
-    branches: [live]
+    branches: 
+      - live
+      - dev
     paths:
       - '**'
       - 'Dockerfile'
@@ -10,18 +12,25 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: ${{project_name}}
+  ECR_REPOSITORY: egystay
+  ECS_CLUSTER: ${{ secrets.AWS_ECS_CLUSTER }}
+  ECS_SERVICE: ${{ secrets.AWS_ECS_SERVICE }}
 
 jobs:
   deploy:
-    name: Deploy to AWS ECR
+    name: Docker build and AWS deploy
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check Docker build
+        if: github.ref_name == 'dev'
+        run: docker build -t $ECR_REPOSITORY:${{ github.sha }} .
+
       - name: Configure AWS credentials
+        if: github.ref_name == 'live'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_IAM_ACCESS_KEY }}
@@ -29,10 +38,12 @@ jobs:
           aws-region: ${{ secrets.AWS_IAM_REGION }}
 
       - name: Login to Amazon ECR
+        if: github.ref_name == 'live'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build, tag, and push image to Amazon ECR
+        if: github.ref_name == 'live'
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -47,6 +58,27 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Deploy to ECS
+        if: github.ref_name == 'live'
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment
+
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+
+      - name: Docker build summary
+        if: github.ref_name == 'dev'
+        run: |
+          echo "## Docker Build Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: Docker image built successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: \`${{ env.ECR_REPOSITORY }}:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Deployment summary
         run: |
