@@ -1,9 +1,14 @@
 name: Notify Discord
 
 on:
-  push:
-    branches:
-      - "live"
+  workflow_run:
+    workflows:
+      - Check Build TypeScript Project
+      - Build and push Docker 
+      - Deploy to EC2
+      - S3 Backup on Live Push
+    types:
+      - completed
 
 jobs:
   notify:
@@ -16,6 +21,6 @@ jobs:
                -d "{
                     \"avatar_url\": \" https://github.com/${{ github.actor }}.png \",
                     \"username\": \" ${{ github.actor }} \",
-                    \"content\": \" Admin: @elrefai99 \nServer: **0Gosha Server*** \nNew push in branch: **${{ github.ref_name }}** \nCommit: **${{ github.event.head_commit.message }}**\"
+                    \"content\": \" Check Build TypeScript Project: Done \n Build and push Docker: Done \n Deploy to EC2: Done \n S3 Backup: Done \nServer: **${{project_name}} Server*** \nNew push in branch: **${{ github.ref_name }}** \nCommit: **${{ github.event.head_commit.message }}**\"
                   }" \
                ${{ secrets.DISCORD_WEBHOOK_0GOSHA }}

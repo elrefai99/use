@@ -1,14 +1,9 @@
-name: Test Build TypeScript Project
+name: Check Build TypeScript Project
 
 on:
   push:
     branches: 
       - "live"
-  workflow_dispatch:
-
-permissions:
-  contents: write
-  id-token: write
 
 jobs:
   build:
@@ -21,16 +16,15 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: 22
           cache: 'pnpm'
 
-      - name: Install dependencies & devDependencies
-        run: pnpm install
-
-      - name: Run TypeScript build
-        run: pnpm build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build

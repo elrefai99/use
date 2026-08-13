@@ -1,9 +1,12 @@
 name: Deploy to EC2
 
 on:
-  push:
-    branches:
-      - "live"
+  workflow_run:
+    workflows:
+      - Check Build TypeScript Project
+      - Build and push Docker image
+    types:
+      - completed
 
 jobs:
   deploy:

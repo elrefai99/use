@@ -1,10 +1,14 @@
 name: S3 Backup on Live Push
 
 on:
-  push:
-    branches:
-      - live
-
+  workflow_run:
+    workflows:
+      - Check Build TypeScript Project
+      - Build and push Docker 
+      - Deploy to EC2
+    types:
+      - completed
+      
 jobs:
   backup:
     name: Zip & Upload to S3

@@ -1,10 +1,11 @@
 name: Build and push Docker image
 
 on:
-  push:
-    branches: 
-      - live
-  workflow_dispatch: # Allow manual triggering
+  workflow_run:
+    workflows:
+      - Check Build TypeScript Project
+    types:
+      - completed
 
 jobs:
   build-and-push:
