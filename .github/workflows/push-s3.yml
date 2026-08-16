@@ -1,13 +1,10 @@
 name: S3 Backup on Live Push
 
 on:
-  workflow_run:
-    workflows:
-      - Check Build TypeScript Project
-      - Build and push Docker 
-      - Deploy to EC2
-    types:
-      - completed
+  workflow_call:
+
+env:
+  PROJECT_NAME: ${{ vars.PROJECT_NAME || github.event.repository.name }}
       
 jobs:
   backup:
@@ -20,7 +17,7 @@ jobs:
 
       - name: Create zip archive
         run: |
-          ZIP_NAME="${{project_name}}-$(date +'%Y%m%d-%H%M%S')-${GITHUB_SHA::7}.zip"
+          ZIP_NAME="$PROJECT_NAME-$(date +'%Y%m%d-%H%M%S')-${GITHUB_SHA::7}.zip"
           echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
 
           zip -r "$ZIP_NAME" . \
@@ -41,5 +38,5 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
         run: |
-          aws s3 cp "$ZIP_NAME" "s3://${{ secrets.AWS_S3_BACKUP_BUCKET }}/backups/${{project_name}}/$ZIP_NAME"
-          echo "Uploaded: s3://${{ secrets.AWS_S3_BACKUP_BUCKET }}/backups/${{project_name}}/$ZIP_NAME"
+          aws s3 cp "$ZIP_NAME" "s3://${{ secrets.AWS_S3_BACKUP_BUCKET }}/backups/$PROJECT_NAME/$ZIP_NAME"
+          echo "Uploaded: s3://${{ secrets.AWS_S3_BACKUP_BUCKET }}/backups/$PROJECT_NAME/$ZIP_NAME"

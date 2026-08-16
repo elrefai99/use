@@ -1,0 +1,51 @@
+name: Sequential CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - "live"
+      - "dev"
+
+jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+    secrets: inherit
+
+  docker:
+    needs: check
+    if: github.ref_name == 'live'
+    uses: ./.github/workflows/push-docker-hub.yml
+    secrets: inherit
+
+  ec2:
+    needs:
+      - check
+      - docker
+    if: >-
+      ${{ always()
+          && needs.check.result == 'success'
+          && (needs.docker.result == 'success' || needs.docker.result == 'skipped') }}
+    uses: ./.github/workflows/push-ec2.yml
+    secrets: inherit
+
+  ecs:
+    needs: ec2
+    uses: ./.github/workflows/push-ecs.yml
+    secrets: inherit
+
+  s3:
+    needs: ecs
+    if: github.ref_name == 'live'
+    uses: ./.github/workflows/push-s3.yml
+    secrets: inherit
+
+  notify:
+    needs:
+      - ecs
+      - s3
+    if: >-
+      ${{ always()
+          && needs.ecs.result == 'success'
+          && (needs.s3.result == 'success' || needs.s3.result == 'skipped') }}
+    uses: ./.github/workflows/notify.discord.yml
+    secrets: inherit

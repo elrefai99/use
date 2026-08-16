@@ -1,26 +1,44 @@
 name: Notify Discord
 
 on:
-  workflow_run:
-    workflows:
-      - Check Build TypeScript Project
-      - Build and push Docker 
-      - Deploy to EC2
-      - S3 Backup on Live Push
-    types:
-      - completed
+  workflow_call:
+
+env:
+  PROJECT_NAME: ${{ vars.PROJECT_NAME || github.event.repository.name }}
 
 jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
       - name: Send Discord Notification Lesoll Server
+        env:
+          ACTOR_NAME: ${{ github.actor }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{
-                    \"avatar_url\": \" https://github.com/${{ github.actor }}.png \",
-                    \"username\": \" ${{ github.actor }} \",
-                    \"content\": \" Check Build TypeScript Project: Done \n Build and push Docker: Done \n Deploy to EC2: Done \n S3 Backup: Done \nServer: **${{project_name}} Server*** \nNew push in branch: **${{ github.ref_name }}** \nCommit: **${{ github.event.head_commit.message }}**\"
-                  }" \
-               ${{ secrets.DISCORD_WEBHOOK_0GOSHA }}
+          if [ "$BRANCH_NAME" = "live" ]; then
+            JOB_SUMMARY="Check build: Done
+          Docker Hub build/push: Done
+          EC2 production deploy: Done
+          AWS/ECS deploy: Done
+          S3 backup: Done"
+          else
+            JOB_SUMMARY="Check build: Done
+          EC2 PBE deploy: Done
+          Development Docker build check: Done"
+          fi
+
+          payload=$(jq -n \
+            --arg avatar_url "https://github.com/$ACTOR_NAME.png" \
+            --arg username "$ACTOR_NAME" \
+            --arg content "$JOB_SUMMARY
+          Server: **$PROJECT_NAME Server**
+          Branch: **$BRANCH_NAME**
+          Commit: **$COMMIT_MESSAGE**" \
+            '{avatar_url: $avatar_url, username: $username, content: $content}')
+
+          curl --fail-with-body \
+            -H "Content-Type: application/json" \
+            -X POST \
+            -d "$payload" \
+            "${{ secrets.DISCORD_WEBHOOK_0GOSHA }}"

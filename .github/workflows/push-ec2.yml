@@ -1,12 +1,10 @@
 name: Deploy to EC2
 
 on:
-  workflow_run:
-    workflows:
-      - Check Build TypeScript Project
-      - Build and push Docker image
-    types:
-      - completed
+  workflow_call:
+
+env:
+  PROJECT_NAME: ${{ vars.PROJECT_NAME || github.event.repository.name }}
 
 jobs:
   deploy:
@@ -15,24 +13,34 @@ jobs:
 
     steps:
       - name: Setup SSH key
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+          EC2_IP_LIVE_HOST: ${{ secrets.EC2_IP_LIVE_HOST }}
+          EC2_IP_PBE_HOST: ${{ secrets.EC2_IP_PBE_HOST }}
+          EC2_SSH_KEY_LIVE: ${{ secrets.EC2_SSH_KEY_LIVE }}
+          EC2_SSH_KEY_PBE: ${{ secrets.EC2_SSH_KEY_PBE }}
         run: |
           mkdir -p ~/.ssh
-          if [ "${{ github.ref_name }}" = "live" ]; then
-            echo "${{ secrets.EC2_SSH_KEY_LIVE }}" > ~/.ssh/deploy_key
-            ssh-keyscan -H "${{ secrets.EC2_IP_LIVE_HOST }}" >> ~/.ssh/known_hosts
+          if [ "$BRANCH_NAME" = "live" ]; then
+            echo "$EC2_SSH_KEY_LIVE" > ~/.ssh/deploy_key
+            ssh-keyscan -H "$EC2_IP_LIVE_HOST" >> ~/.ssh/known_hosts
           else
-            echo "${{ secrets.EC2_SSH_KEY_PBE }}" > ~/.ssh/deploy_key
-            ssh-keyscan -H "${{ secrets.EC2_IP_PBE_HOST }}" >> ~/.ssh/known_hosts
+            echo "$EC2_SSH_KEY_PBE" > ~/.ssh/deploy_key
+            ssh-keyscan -H "$EC2_IP_PBE_HOST" >> ~/.ssh/known_hosts
           fi
           chmod 600 ~/.ssh/deploy_key
 
       - name: Deploy
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+          EC2_IP_LIVE_HOST: ${{ secrets.EC2_IP_LIVE_HOST }}
+          EC2_IP_PBE_HOST: ${{ secrets.EC2_IP_PBE_HOST }}
         run: |
-          if [ "${{ github.ref_name }}" = "live" ]; then
-            HOST="root@${{ secrets.EC2_IP_LIVE_HOST }}"
+          if [ "$BRANCH_NAME" = "live" ]; then
+            HOST="root@$EC2_IP_LIVE_HOST"
             PROJECT_DIR="/root/properties"
           else
-            HOST="root@${{ secrets.EC2_IP_PBE_HOST }}"
+            HOST="root@$EC2_IP_PBE_HOST"
             PROJECT_DIR="/root/property"
           fi
 
@@ -43,7 +51,7 @@ jobs:
 
             cd $PROJECT_DIR
 
-            git pull origin ${{ github.ref_name }}
+            git pull origin $BRANCH_NAME
 
             npm install
 
@@ -54,7 +62,7 @@ jobs:
               echo "[deploy] JavaScript — skipping build"
             fi
 
-            pm2 reload ecosystem.config.cjs --only ${{project_name}}
+            pm2 reload ecosystem.config.cjs --only $PROJECT_NAME
 
             pm2 save
 
