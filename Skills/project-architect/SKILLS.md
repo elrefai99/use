@@ -1,5 +1,5 @@
 ---
-name: backend-architect
+name: project-architect
 description: Design and review backend architecture decisions following production-grade patterns.
 user_invocable: true
 ---

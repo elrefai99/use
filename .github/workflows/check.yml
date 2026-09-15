@@ -24,3 +24,15 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
+
+  ec2:
+    needs: build
+    uses: ./.github/workflows/push-ec2.yml
+  
+  ecs:
+    needs: build
+    uses: ./.github/workflows/push-ec2.yml
+  
+  s3:
+    needs: ec2
+    uses: ./.github/workflows/push-ec2.yml
