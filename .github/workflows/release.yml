@@ -3,7 +3,7 @@ name: Auto Release from Package Version
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 permissions:
