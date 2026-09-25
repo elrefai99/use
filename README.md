@@ -6,6 +6,20 @@ A collection of setup guides, reusable GitHub Actions workflows, and configurati
 
 - [terminal/ghostty.md](terminal/ghostty.md) — Complete guide to install and configure Ghostty terminal with Powerlevel10k, autosuggestions, syntax highlighting, and the Catppuccin theme. Covers macOS, Linux, and Windows.
 
+## Installation
+
+```powershell
+pnpx skills add elrefai99/use --skill="*"
+```
+
+To install all skills globally:
+
+```powershell
+pnpx skills add elrefai99/use --skill="*" -g
+```
+
+Learn more about the CLI usage at [skills](https://github.com/vercel-labs/skills).
+
 ## GitHub Actions Workflows
 
 Reusable CI/CD workflow templates located in [`.github/workflows/`](.github/workflows/).
